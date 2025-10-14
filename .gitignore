@@ -1,0 +1,16 @@
+# Arquivos e diretórios de compilação
+/build/
+
+# Diretórios e arquivos do CMake (gerados fora da pasta build)
+/CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Dependências externas
+# Ignora a pasta inteira do código-fonte da SDL3 que foi adicionada via add_subdirectory
+/vendor/SDL3/
+
+# Binários executáveis (para o caso de serem gerados fora de 'build')
+*.exe
+chip8_emulator
