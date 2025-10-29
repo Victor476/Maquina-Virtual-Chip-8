@@ -1,30 +1,26 @@
 #include <iostream>
-#include <SDL3/SDL.h> // Necessário para a função main()
-#include "Chip8.h"    // Inclui a definição da sua Máquina Virtual
+#include <SDL3/SDL.h> 
+#include "Chip8.h"    
 
 int main(int argc, char* argv[]) {
-    // 1. Lidar com a inicialização da SDL (Temporariamente Desativado)
-    // Devido à Issue de Configuração, pulamos a inicialização completa da SDL,
-    // mas o código final iria aqui.
-
-    std::cout << "Iniciando Maquina Virtual Chip-8..." << std::endl;
-
-    // 2. Instanciar a VM (Isso chama Chip8::Chip8() que chama initialize())
-    Chip8 emulator;
-
-    // 3. Loop principal (Temporariamente simples)
-    bool quit = false;
-    
-    // Assumindo que você comentou a SDL no CMake, não podemos processar eventos.
-    // O loop final teria uma checagem de evento SDL aqui.
-    while (!quit) {
-        // O ciclo da CPU e a atualização da tela viriam aqui
-
-        // Apenas para demonstração e evitar loop infinito:
-        quit = true; 
+    // Critério: Implementar uso via linha de comando
+    if (argc < 2) {
+        std::cerr << "ERRO: Forneca o caminho para o arquivo ROM (.ch8) como argumento." << std::endl;
+        std::cerr << "Uso: ./chip8_emulator <caminho/para/a/rom.ch8>" << std::endl;
+        return 1;
     }
 
-    std::cout << "VM encerrada com sucesso. Verifique o console para a mensagem de inicialização." << std::endl;
+    // O primeiro argumento (argv[1]) é o caminho para o arquivo ROM
+    const char* rom_path = argv[1]; 
+
+    Chip8 emulator;
+    
+    // Chamada à função de carregamento
+    emulator.load_rom(rom_path,0x200); 
+
+    // O loop principal (Fetch-Decode-Execute) viria aqui
+
+    std::cout << "VM encerrada com sucesso após carregar ROM." << std::endl;
 
     return 0;
 }

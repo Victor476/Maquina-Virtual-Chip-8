@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <array>
 #include <SDL3/SDL_keyboard.h> 
+#include <SDL3/SDL.h>
 
 // O teclado Chip-8 tem 16 teclas (0 a F)
 constexpr int CHIP8_KEY_COUNT = 16;

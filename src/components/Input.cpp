@@ -57,10 +57,10 @@ void Input::setup_key_map() {
 void Input::handle_event(SDL_Event& event) {
     // Lógica para mapear a tecla física pressionada/liberada
     if (event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP) {
-        
+        SDL_Keycode key_code = event.key.key;
         // Percorre o mapeamento para encontrar a tecla Chip-8 correspondente
         for (int i = 0; i < CHIP8_KEY_COUNT; ++i) {
-            if (event.key.keysym.sym == key_map[i]) {
+            if (key_code == key_map[i]) { 
                 // Se encontrou, atualiza o estado
                 key_state[i] = (event.type == SDL_EVENT_KEY_DOWN);
                 break;

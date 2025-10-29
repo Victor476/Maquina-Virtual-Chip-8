@@ -27,6 +27,8 @@ file(GLOB SOURCE_FILES
     "src/components/*.cpp"
 )
 
+
+
 # Cria o target executável
 add_executable(chip8_emulator ${SOURCE_FILES})
 
@@ -41,3 +43,13 @@ target_link_libraries(chip8_emulator PUBLIC
 if(CMAKE_COMPILER_IS_GNUtoRClang)
     target_compile_options(chip8_emulator PUBLIC -Wall -Wextra -pedantic)
 endif()
+
+# Adicionado no final do CMakeLists.txt
+add_custom_target(rebuild 
+    COMMAND ${CMAKE_COMMAND} -E remove_directory ${PROJECT_SOURCE_DIR}/build
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_SOURCE_DIR}/build
+    COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=Release ${PROJECT_SOURCE_DIR} -B ${PROJECT_SOURCE_DIR}/build
+    COMMAND ${CMAKE_COMMAND} --build ${PROJECT_SOURCE_DIR}/build -- -j
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    BYPRODUCTS chip8_emulator
+)
