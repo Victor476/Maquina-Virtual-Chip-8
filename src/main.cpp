@@ -60,10 +60,12 @@ int main(int argc, char* argv[]) {
     }
 
     // Inicializar SDL (VÍDEO E EVENTOS)
-    if (SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO) < 0) { 
-        std::cerr << "ERRO SDL: Falha ao inicializar eventos e video: " << SDL_GetError() << std::endl;
+if (SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) { // <--- SDL_INIT_AUDIO NECESSÁRIO
+        std::cerr << "ERRO SDL: Falha ao inicializar SDL: " << SDL_GetError() << std::endl;
         return 1;
     }
+
+    
     
     // --- 2. PREPARAÇÃO DA VM, GRÁFICOS E CARREGAMENTO ---
     Chip8 emulator(clock_hz); 
@@ -100,6 +102,10 @@ int main(int argc, char* argv[]) {
         }
 
         // B. Ciclo da CPU (Fetch-Decode-Execute)
+        if (!emulator.is_waiting_for_key()) { // <-- CORREÇÃO: Usando o getter
+            emulator.cycle(); 
+            cycles_executed_total++;
+        }
         emulator.cycle(); 
         cycles_executed_total++; // Conta o ciclo executado
 

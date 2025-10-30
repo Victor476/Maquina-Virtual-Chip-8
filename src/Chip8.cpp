@@ -45,7 +45,9 @@ Chip8::Chip8(uint32_t frequency)
      timers{}, 
      display{}, 
      input{}, 
-     cpu_frequency_hz(frequency) 
+     cpu_frequency_hz(frequency),
+     m_is_waiting_for_key(false), 
+     key_register_to_load(0)
 {
     std::srand(std::time(0));
     initialize(); 
@@ -56,13 +58,20 @@ void Chip8::initialize() {
     std::memset(memory.data(), 0, memory.size()); 
     std::memset(V, 0, sizeof(V));               
     std::memset(stack, 0, sizeof(stack));       
-    I = 0; SP = 0; opcode = 0; PC = 0x200; 
-
+    I = 0; 
+    SP = 0; 
+    opcode = 0; 
+    PC = 0x200; 
+    m_is_waiting_for_key = false; 
+    key_register_to_load = 0;
     timers.set_delay_timer(0); 
     timers.set_sound_timer(0); 
     display.clear_screen();    
     input.reset_keys();        
-    std::memcpy(memory.data(), CHIP8_FONTSET, sizeof(CHIP8_FONTSET));
+    std::memcpy(memory.data(), 
+    CHIP8_FONTSET, 
+    sizeof(CHIP8_FONTSET));
+    
 
     std::cout << "--- Chip-8 VM Inicializada ---" << std::endl;
     std::cout << "PC: 0x" << std::hex << std::setw(4) << std::setfill('0') << PC << " (Esperado: 0x0200)" << std::endl;
@@ -88,6 +97,14 @@ void Chip8::load_rom(const char* filename, uint16_t load_address) {
     std::cout << "Tamanho: " << size << " bytes. Endereco de Carga: 0x" << std::hex << start_addr << std::endl;
 
     // Validation prints removed for brevity (assuming they are there)
+}
+
+void Chip8::set_key_pressed(uint8_t key_value) {
+    if (m_is_waiting_for_key) {
+        V[key_register_to_load] = key_value;
+        m_is_waiting_for_key = false;
+        std::cout << "DEBUG: FX0A - Tecla 0x" << std::hex << (int)key_value << " recebida em V" << (int)key_register_to_load << "." << std::endl;
+    }
 }
 
 bool Chip8::init_display_graphics(uint32_t scale) {
@@ -180,11 +197,12 @@ void Chip8::execute_opcode(uint16_t opcode) {
             }
             break;
             
-        case 0x5000: // 5xyn: SE Vx, Vy, 0
+        case 0x5000: // 5xyn: SE Vx, Vy, 0 (Skip if Equal - Regs)
             if (n == 0) { // 5xy0
+                // Lógica: if (Vx == Vy) PC += 2
                 if (V[x] == V[y]) {
                     PC += 2;
-                    std::cout << "DEBUG: Opcode 5XY0: SE (Regs) - Salto APROVADO." << std::endl;
+                    std::cout << "DEBUG: Opcode 5XY0: SE (Regs) - Salto APROVADO. PC=0x" << std::hex << PC << std::endl;
                 } else {
                     std::cout << "DEBUG: Opcode 5XY0: SE (Regs) - Salto REJEITADO." << std::endl;
                 }
@@ -229,17 +247,18 @@ void Chip8::execute_opcode(uint16_t opcode) {
             }
             break;
         
-        case 0x9000: // 9xyn: SNE Vx, Vy, 0
-            if (n == 0) { // 9xy0
-                if (V[x] != V[y]) {
-                    PC += 2;
-                    std::cout << "DEBUG: Opcode 9XY0: SNE (Regs) - Salto APROVADO." << std::endl;
+            case 0x9000: // 9xyn: SNE Vx, Vy, 0 (Skip if Not Equal - Regs)
+                if (n == 0) { // 9xy0
+                    // Lógica: if (Vx != Vy) PC += 2
+                    if (V[x] != V[y]) {
+                        PC += 2;
+                        std::cout << "DEBUG: Opcode 9XY0: SNE (Regs) - Salto APROVADO. PC=0x" << std::hex << PC << std::endl;
+                    } else {
+                        std::cout << "DEBUG: Opcode 9XY0: SNE (Regs) - Salto REJEITADO." << std::endl;
+                    }
                 } else {
-                    std::cout << "DEBUG: Opcode 9XY0: SNE (Regs) - Salto REJEITADO." << std::endl;
+                    std::cerr << "ERRO FATAL: Opcode Desconhecido (9xyn): 0x" << std::hex << opcode << std::endl;
                 }
-            } else {
-                std::cerr << "ERRO FATAL: Opcode Desconhecido (9xyn): 0x" << std::hex << opcode << std::endl;
-            }
             break;
             
         case 0xA000: // Annn: LD I, addr (Load Address)
@@ -327,21 +346,59 @@ void Chip8::execute_opcode(uint16_t opcode) {
             break;
         }
             
-        case 0xE000: // Exnn - Teclado - SKELETON
+        case 0xE000: // Exnn - Teclado (Issue 17)
             switch (nn) {
-                case 0x009E: // Ex9E: SKP Vx
-                case 0x00A1: // ExA1: SKNP Vx
-                    std::cout << "DEBUG: Opcode EXNN: Teclado SKP/SKNP (Implementação pendente)." << std::endl;
+                case 0x009E: // Ex9E: SKP Vx (Skip if Key Pressed)
+                    // Lógica: Se a tecla V[x] estiver pressionada, PC += 2 (total PC += 4)
+                    if (input.key_state[V[x]]) { // V[x] armazena o índice (0-F) da tecla Chip-8
+                        PC += 2; // O Fetch já incrementou 2, pulamos mais 2
+                        std::cout << "DEBUG: Opcode EX9E: SKP - Salto APROVADO." << std::endl;
+                    } else {
+                         std::cout << "DEBUG: Opcode EX9E: SKP - Salto REJEITADO." << std::endl;
+                    }
+                    break;
+                case 0x00A1: // ExA1: SKNP Vx (Skip if Key Not Pressed)
+                    // Lógica: Se a tecla V[x] NÃO estiver pressionada, PC += 2
+                    if (!input.key_state[V[x]]) {
+                        PC += 2;
+                        std::cout << "DEBUG: Opcode EXA1: SKNP - Salto APROVADO." << std::endl;
+                    } else {
+                        std::cout << "DEBUG: Opcode EXA1: SKNP - Salto REJEITADO." << std::endl;
+                    }
                     break;
                 default:
                     std::cerr << "ERRO: Opcode EXNN desconhecido: 0x" << std::hex << opcode << std::endl;
             }
             break;
-        
+
         case 0xF000: // Fxnn - Timers e Memória (Issue 18 - Completa)
             switch (nn) {
-                case 0x0007: V[x] = timers.get_delay_timer(); break; // Fx07: LD Vx, DT
-                case 0x000A: std::cout << "DEBUG: Opcode FX0A: LD Vx, K (Esperando tecla)..." << std::endl; break; // Fx0A: LD Vx, K
+                case 0x009E: // Ex9E: SKP Vx (Skip if Key Pressed)
+                    // Lógica: Se o estado da tecla V[x] estiver pressionado, PC += 2.
+                    // Usamos V[x] como índice (0-F) para buscar o estado em input.key_state.
+                    if (input.key_state[V[x]]) { 
+                        PC += 2; 
+                        std::cout << "DEBUG: Opcode EX9E: SKP - Salto APROVADO." << std::endl;
+                    } else {
+                         std::cout << "DEBUG: Opcode EX9E: SKP - Salto REJEITADO." << std::endl;
+                    }
+                    break;
+                case 0x00A1: // ExA1: SKNP Vx (Skip if Key Not Pressed)
+                    // Lógica: Se o estado da tecla V[x] NÃO estiver pressionado, PC += 2.
+                    if (!input.key_state[V[x]]) {
+                        PC += 2;
+                        std::cout << "DEBUG: Opcode EXA1: SKNP - Salto APROVADO." << std::endl;
+                    } else {
+                        std::cout << "DEBUG: Opcode EXA1: SKNP - Salto REJEITADO." << std::endl;
+                    }
+                    break;
+                case 0x0007: V[x] = timers.get_delay_timer(); break; 
+                case 0x000A: 
+                    m_is_waiting_for_key = true;
+                    key_register_to_load = x;
+                    PC -= 2; 
+                    std::cout << "DEBUG: Opcode FX0A: LD V" << (int)x << ", K (Esperando tecla)..." << std::endl;
+                    break;                
                 case 0x0015: timers.set_delay_timer(V[x]); break; // Fx15: LD DT, Vx
                 case 0x0018: timers.set_sound_timer(V[x]); break; // Fx18: LD ST, Vx
                 case 0x001E: I += V[x]; break; // Fx1E: ADD I, Vx
@@ -352,10 +409,12 @@ void Chip8::execute_opcode(uint16_t opcode) {
                     for (int i = 0; i <= x; ++i) memory[I + i] = V[i]; I += x + 1; break;
                 case 0x0065: // Fx65: LD Vx, [I]
                     for (int i = 0; i <= x; ++i) V[i] = memory[I + i]; I += x + 1; break;
+                
                 default:
                     std::cerr << "ERRO: Opcode FXNN desconhecido: 0x" << std::hex << opcode << std::endl;
             }
             break;
+            
         
             
         default:

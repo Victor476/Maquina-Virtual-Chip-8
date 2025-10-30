@@ -9,25 +9,23 @@
 
 class Chip8 {
 public:
-    // 1. Construtor Padrão (necessário se definirmos outro construtor)
-    Chip8();
-    
-    // 2. Construtor de Frequência (OBRIGATÓRIO para main.cpp funcionar)
     Chip8(uint32_t frequency); 
-    
-    // 3. Funções de I/O que criamos para acessar componentes privados:
     void process_input(SDL_Event& event);
     void update_timers();
-    
-
     void initialize();
     void load_rom(const char* filename, uint16_t load_address = 0x200);
     void cycle();
-
     bool init_display_graphics(uint32_t scale); // Wrapper para display.init_graphics
     void render_display();                       // Wrapper para display.render
     void destroy_display_graphics();
-    
+    void set_key_pressed(uint8_t key_value);
+    void load_font_set();
+    void execute_opcode(uint16_t opcode);
+    uint16_t fetch_opcode();
+    bool is_waiting_for_key() { return m_is_waiting_for_key; }
+
+
+
 
 private:
     // Core CPU State
@@ -42,10 +40,8 @@ private:
     Display display;        
     Input input;
     uint32_t cpu_frequency_hz;
-    // Funções auxiliares
-    void load_font_set();
-    uint16_t fetch_opcode(); // <-- Ajuste de retorno
-    void execute_opcode(uint16_t opcode);
+    bool m_is_waiting_for_key;
+    uint8_t key_register_to_load;
     
 };
 

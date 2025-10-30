@@ -36,7 +36,7 @@ add_executable(chip8_emulator ${SOURCE_FILES})
 # Vincula o executável ao target da SDL3 que acabamos de construir.
 # Esta é a sintaxe moderna do CMake para linkar SDL3 a partir do código-fonte.
 target_link_libraries(chip8_emulator PUBLIC 
-    SDL3::SDL3 
+    SDL3::SDL3
 )
 
 # 6. CONFIGURAÇÕES ADICIONAIS
