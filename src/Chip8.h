@@ -24,6 +24,10 @@ public:
     void load_rom(const char* filename, uint16_t load_address = 0x200);
     void cycle();
 
+    bool init_display_graphics(uint32_t scale); // Wrapper para display.init_graphics
+    void render_display();                       // Wrapper para display.render
+    void destroy_display_graphics();
+
 private:
     // Core CPU State
     std::array<uint8_t, 4096> memory;   

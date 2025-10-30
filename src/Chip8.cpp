@@ -78,8 +78,28 @@ void Chip8::load_rom(const char* filename, uint16_t load_address) {
     // Validation prints removed for brevity (assuming they are there)
 }
 
-void Chip8::process_input(SDL_Event& event) { input.handle_event(event); }
-void Chip8::update_timers() { timers.update_timers(); }
+bool Chip8::init_display_graphics(uint32_t scale) {
+    return display.init_graphics(scale);
+}
+
+void Chip8::render_display() {
+    display.render();
+}
+
+void Chip8::destroy_display_graphics() {
+    display.destroy_graphics();
+}
+
+void Chip8::process_input(SDL_Event& event) 
+{ 
+    input.handle_event(event); 
+}
+
+void Chip8::update_timers() 
+{ 
+    timers.update_timers(); 
+}
+
 uint16_t Chip8::fetch_opcode() {
     uint16_t msb = memory[PC]; 
     uint16_t lsb = memory[PC + 1];
