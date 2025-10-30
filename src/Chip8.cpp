@@ -172,15 +172,98 @@ void Chip8::execute_opcode(uint16_t opcode) {
             std::cout << "DEBUG: Opcode 7XNN: ADD V" << (int)x << ", byte. V" << (int)x << " += 0x" << std::hex << (int)nn << std::endl;
             break;
 
-        case 0x9000: /* 9xy0: SNE Vx, Vy */ break;
-        case 0xA000: /* Annn: LD I, addr */ break;
-        case 0xB000: /* Bnnn: JP V0, addr */ break;
-        case 0xC000: /* Cxnn: RND Vx, byte */ break;
+        case 0x8000: // 8xyn - Aritméticas e Lógicas
+            switch (n) {
+                
+                case 0x0: // 8xy0: LD Vx, Vy (Load)
+                    // Lógica: Vx = Vy
+                    V[x] = V[y];
+                    std::cout << "DEBUG: Opcode 8XY0: LD V" << (int)x << ", V" << (int)y << ". V" << (int)x << "=" << (int)V[x] << std::endl;
+                    break;
+                
+                case 0x1: // 8xy1: OR Vx, Vy (OR Bitwise)
+                    // Lógica: Vx = Vx | Vy. VF não é afetado.
+                    V[x] = V[x] | V[y];
+                    std::cout << "DEBUG: Opcode 8XY1: OR V" << (int)x << ", V" << (int)y << std::endl;
+                    break;
+                
+                case 0x2: // 8xy2: AND Vx, Vy (AND Bitwise)
+                    // Lógica: Vx = Vx & Vy. VF não é afetado.
+                    V[x] = V[x] & V[y];
+                    std::cout << "DEBUG: Opcode 8XY2: AND V" << (int)x << ", V" << (int)y << std::endl;
+                    break;
+                
+                case 0x3: // 8xy3: XOR Vx, Vy (XOR Bitwise)
+                    // Lógica: Vx = Vx ^ Vy. VF não é afetado.
+                    V[x] = V[x] ^ V[y];
+                    std::cout << "DEBUG: Opcode 8XY3: XOR V" << (int)x << ", V" << (int)y << std::endl;
+                    break;
 
-        case 0x8000: /* 8xyn - Aritméticas e Lógicas (Skeleton) */ break;
-        case 0xD000: /* Dxyn: DRW Vx, Vy, nibble (Desenha Sprite) */ break;
-            
-        case 0xE000: /* Exnn - Teclado (Skeleton) */ break;
+                case 0x4: // 8xy4: ADD Vx, Vy (Soma com Carry)
+                    // Lógica: Vx = Vx + Vy. VF = 1 se houver carry.
+                    {
+                        // Use um tipo de 16 bits para detectar o overflow
+                        uint16_t result = (uint16_t)V[x] + (uint16_t)V[y];
+                        
+                        // Se houver overflow (resultado > 255), VF = 1
+                        V[0xF] = (result > 255) ? 1 : 0;
+                        
+                        // O resultado é truncado para 8 bits
+                        V[x] = (uint8_t)result;
+                    }
+                    std::cout << "DEBUG: Opcode 8XY4: ADD V" << (int)x << ", V" << (int)y << ". Carry=" << (int)V[0xF] << std::endl;
+                    break;
+
+                case 0x5: // 8xy5: SUB Vx, Vy (Subtração com Borrow)
+                    // Lógica: Vx = Vx - Vy. VF = 1 se NÃO houver borrow (Vx >= Vy).
+                    
+                    // VF = 1 se Vx >= Vy antes da subtração
+                    V[0xF] = (V[x] >= V[y]) ? 1 : 0;
+                    
+                    // A subtração em 8 bits é automática, e o overflow é o resultado
+                    V[x] = V[x] - V[y]; 
+                    
+                    std::cout << "DEBUG: Opcode 8XY5: SUB V" << (int)x << ", V" << (int)y << ". NoBorrow=" << (int)V[0xF] << std::endl;
+                    break;
+                
+                case 0x6: // 8xy6: SHR Vx, {Vy} (Shift Right)
+                    // Lógica: Vx = Vx >> 1. VF = LSB antes do shift.
+                    
+                    // VF recebe o bit menos significativo de Vx (o bit 0)
+                    V[0xF] = V[x] & 0x1;
+                    
+                    V[x] >>= 1;
+                    
+                    // Nota: O opcode original usava o valor de Vy, mas a implementação moderna ignora Vy e usa Vx.
+                    std::cout << "DEBUG: Opcode 8XY6: SHR V" << (int)x << ". VF=" << (int)V[0xF] << std::endl;
+                    break;
+                
+                case 0x7: // 8xy7: SUBN Vx, Vy (Reverse Subtraction)
+                    // Lógica: Vx = Vy - Vx. VF = 1 se NÃO houver borrow (Vy >= Vx).
+                    
+                    // VF = 1 se Vy >= Vx antes da subtração
+                    V[0xF] = (V[y] >= V[x]) ? 1 : 0;
+                    
+                    V[x] = V[y] - V[x];
+                    
+                    std::cout << "DEBUG: Opcode 8XY7: SUBN V" << (int)x << ", V" << (int)y << ". NoBorrow=" << (int)V[0xF] << std::endl;
+                    break;
+                
+                case 0xE: // 8xyE: SHL Vx, {Vy} (Shift Left)
+                    // Lógica: Vx = Vx << 1. VF = MSB antes do shift.
+                    
+                    // VF recebe o bit mais significativo de Vx (o bit 7)
+                    V[0xF] = (V[x] & 0x80) >> 7; 
+                    
+                    V[x] <<= 1;
+                    
+                    std::cout << "DEBUG: Opcode 8XYE: SHL V" << (int)x << ". VF=" << (int)V[0xF] << std::endl;
+                    break;
+
+                default:
+                    std::cerr << "ERRO: Opcode 8xyn desconhecido: 0x" << std::hex << opcode << std::endl;
+            }
+            break; // Fim do case 0x8000
         
         // =========================================================================
         case 0xF000: // Fxnn - Timers e Memória
