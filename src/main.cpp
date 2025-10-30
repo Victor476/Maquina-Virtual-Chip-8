@@ -3,7 +3,7 @@
 #include <chrono>   
 #include <thread>   
 #include <algorithm>
-#include <cstring>  // Para strcmp
+#include <cstring>  
 #include <iomanip>  // Para std::fixed, std::setprecision
 #include "Chip8.h"    
 #include "components/Display.h"
@@ -32,7 +32,7 @@ uint32_t parse_args(int argc, char* argv[], const char** rom_path, uint32_t defa
                 std::cerr << "AVISO: Valor de --clock invalido. Usando padrao: " << default_clock << " Hz." << std::endl;
             }
         } 
-        else if (strcmp(argv[i], "--scale") == 0 && i + 1 < argc) { // <--- NOVO PARSER PARA ESCALA
+        else if (strcmp(argv[i], "--scale") == 0 && i + 1 < argc) { 
             try {
                 scale_factor = std::stoul(argv[++i]);
                 std::cout << "DEBUG: Fator de escala configurado para " << scale_factor << "x. (Resolucao: " 
@@ -59,8 +59,8 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Inicializar SDL (AGORA INCLUI VÍDEO E EVENTOS)
-    if (SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO) < 0) { // <--- SDL_INIT_VIDEO NECESSÁRIO
+    // Inicializar SDL (VÍDEO E EVENTOS)
+    if (SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO) < 0) { 
         std::cerr << "ERRO SDL: Falha ao inicializar eventos e video: " << SDL_GetError() << std::endl;
         return 1;
     }
@@ -69,16 +69,16 @@ int main(int argc, char* argv[]) {
     Chip8 emulator(clock_hz); 
     emulator.load_rom(rom_path, 0x200); 
 
-    // NOVO: Inicializar o Display com as configurações de escala
+    // Inicializar o Display com as configurações de escala
     if (!emulator.init_display_graphics(scale_factor)) { 
         SDL_Quit();
         return 1;
     }
 
-    // Variáveis para Validação (Issue 6)
-    long long cycles_executed = 0;
-    auto last_log_time = high_resolution_clock::now();
-    
+    // Variáveis para Validação (Issue 6 - Medição da Performance TOTAL)
+    long long cycles_executed_total = 0;
+    auto start_time = high_resolution_clock::now(); // Tempo em que o loop principal começa
+
     // Tempo alvo para CADA ciclo da CPU (1/N Hz)
     const auto CPU_CYCLE_DURATION = duration_cast<microseconds>(seconds(1)) / clock_hz; 
     
@@ -93,7 +93,7 @@ int main(int argc, char* argv[]) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_EVENT_QUIT) {
-                quit = true;
+                quit = true; // Seta a flag para sair do loop
             } else {
                 emulator.process_input(event);
             }
@@ -101,7 +101,7 @@ int main(int argc, char* argv[]) {
 
         // B. Ciclo da CPU (Fetch-Decode-Execute)
         emulator.cycle(); 
-        cycles_executed++;
+        cycles_executed_total++; // Conta o ciclo executado
 
         // C. Controle de Timing da CPU (Mantém a frequência em N Hz)
         auto cpu_end_time = high_resolution_clock::now();
@@ -116,29 +116,33 @@ int main(int argc, char* argv[]) {
         auto elapsed_60hz_time = now - last_60hz_tick;
 
         if (elapsed_60hz_time >= US_PER_60HZ_CYCLE) {
-            // 1. Decremento dos Temporizadores (Critério 60Hz)
             emulator.update_timers(); 
-            
-            // 2. Renderização da Tela (Critério 60Hz)
-            emulator.render_display(); // <--- CHAMADA DE RENDERIZAÇÃO
-            
+            emulator.render_display();
             last_60hz_tick = now;
         }
         
-        // E. VALIDAÇÃO DA PERFORMANCE (Log a cada segundo)
-        auto log_duration = duration_cast<seconds>(now - last_log_time);
-        if (log_duration >= seconds(1)) {
-            double actual_hz = (double)cycles_executed / log_duration.count();
-            std::cout << "VALIDACAO: CPU rodando a " << std::fixed << std::setprecision(2) 
-                      << actual_hz << " Hz (Alvo: " << clock_hz << " Hz)." << std::endl;
-            
-            cycles_executed = 0;
-            last_log_time = now;
-        }
+        // ** NOTA: Lógica de VALIDAÇÃO REMOVIDA daqui **
     }
 
-    // --- 4. ENCERRAMENTO ---
-    emulator.destroy_display_graphics(); // <--- DESTRUIÇÃO DA JANELA
+    // --- 4. ENCERRAMENTO E VALIDAÇÃO FINAL ---
+    emulator.destroy_display_graphics(); 
+    
+    // Calcula o tempo total de execução e a frequência média final
+    auto end_time = high_resolution_clock::now();
+    auto total_duration = duration_cast<seconds>(end_time - start_time);
+    
+    // Evita divisão por zero se a duração total for zero
+    if (total_duration.count() > 0) {
+        double average_actual_hz = (double)cycles_executed_total / total_duration.count();
+        std::cout << "\n=================================================" << std::endl;
+        std::cout << "VALIDACAO FINAL (ISSUE 6 - PERFORMANCE):" << std::endl;
+        std::cout << "Tempo total de execucao: " << total_duration.count() << " segundos." << std::endl;
+        std::cout << "Total de ciclos executados: " << cycles_executed_total << std::endl;
+        std::cout << "Frequencia media da CPU: " << std::fixed << std::setprecision(2) 
+                  << average_actual_hz << " Hz (Alvo: " << clock_hz << " Hz)." << std::endl;
+        std::cout << "=================================================" << std::endl;
+    }
+    
     SDL_Quit();
     std::cout << "VM encerrada de forma limpa." << std::endl;
     return 0;
