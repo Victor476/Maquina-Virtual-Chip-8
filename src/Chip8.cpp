@@ -260,10 +260,72 @@ void Chip8::execute_opcode(uint16_t opcode) {
             break;
         }
 
-        case 0xD000: // Dxyn: DRW Vx, Vy, nibble (Desenha Sprite) - SKELETON
-            // Implementação completa virá na Issue de Desenho
-            std::cout << "DEBUG: Opcode DXYN: DRW (Desenho) de sprite com altura " << (int)n << "." << std::endl;
+        case 0xD000: // Dxyn: DRW Vx, Vy, nibble (Desenha Sprite) - IMPLEMENTADO
+        {
+            // O código do sprite começa no endereço I
+            uint16_t sprite_address = I; 
+            
+            // Altura do sprite (N)
+            uint8_t height = n; 
+            
+            // Coordenadas iniciais X e Y (com base nos registradores Vx e Vy)
+            // Lógica de wrapping: Modulo CHIP8_WIDTH (64) e CHIP8_HEIGHT (32)
+            uint8_t start_x = V[x] % CHIP8_WIDTH; 
+            uint8_t start_y = V[y] % CHIP8_HEIGHT; 
+
+            // Flag de colisão (Critério de Aceitação)
+            V[0xF] = 0; 
+            bool pixel_was_turned_off = false;
+
+            // 1. Loop sobre as linhas do sprite (altura N)
+            for (int sprite_row = 0; sprite_row < height; ++sprite_row) {
+                
+                uint8_t sprite_byte = memory[sprite_address + sprite_row];
+                uint8_t current_y = (start_y + sprite_row) % CHIP8_HEIGHT; // Wrapping Y
+
+                // Parar se Y ultrapassar o limite da tela (após o wrapping)
+                if (current_y >= CHIP8_HEIGHT) continue; 
+
+                // 2. Loop sobre os 8 bits da linha do sprite (largura 8)
+                for (int sprite_col = 0; sprite_col < 8; ++sprite_col) {
+                    
+                    // O bit atual do sprite é o MSB (mais à esquerda)
+                    uint8_t sprite_pixel = (sprite_byte >> (7 - sprite_col)) & 0x1;
+                    
+                    // Coordenada X atual (com wrapping)
+                    uint8_t current_x = (start_x + sprite_col) % CHIP8_WIDTH; // Wrapping X
+
+                    // Parar se X ultrapassar o limite da tela (após o wrapping)
+                    if (current_x >= CHIP8_WIDTH) continue; 
+                    
+                    // Se o pixel do sprite for 1, processamos a colisão
+                    if (sprite_pixel) {
+                        size_t display_index = current_x + current_y * CHIP8_WIDTH;
+                        
+                        uint8_t old_pixel = display.pixel_buffer[display_index];
+                        uint8_t new_pixel = old_pixel ^ 0x1; // XOR com 1
+
+                        // Critério: Flag de Colisão (VF = 1 se um pixel for desligado: 1 -> 0)
+                        if (old_pixel == 1 && new_pixel == 0) {
+                            pixel_was_turned_off = true;
+                        }
+                        
+                        // Atualiza o buffer
+                        display.pixel_buffer[display_index] = new_pixel;
+                    }
+                }
+            }
+
+            // Define o VF APENAS se uma colisão ocorreu
+            if (pixel_was_turned_off) {
+                V[0xF] = 1;
+            } else {
+                V[0xF] = 0;
+            }
+
+            std::cout << "DEBUG: Opcode DXYN: DRW - Desenho concluido. Colisao (VF)=" << (int)V[0xF] << std::endl;
             break;
+        }
             
         case 0xE000: // Exnn - Teclado - SKELETON
             switch (nn) {
@@ -294,6 +356,7 @@ void Chip8::execute_opcode(uint16_t opcode) {
                     std::cerr << "ERRO: Opcode FXNN desconhecido: 0x" << std::hex << opcode << std::endl;
             }
             break;
+        
             
         default:
             std::cerr << "ERRO FATAL: Opcode Desconhecido: 0x" << std::hex << opcode << std::endl;
