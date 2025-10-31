@@ -1,9 +1,5 @@
 
-## Implementação da Issue 21: Conteúdo do `README_USO.pdf`
 
-Aqui está o conteúdo Markdown que você deve criar na pasta `docs/` (ex: `README_USO.md`) para gerar o PDF final:
-
-````markdown
 # 🎮 Guia de Uso da Máquina Virtual Chip-8
 
 Este documento explica como executar o emulador Chip-8 (`chip8_emulator`) e detalha o mapeamento do teclado hexadecimal (0-F) para que você possa interagir com os programas e jogos (ROMs) da plataforma.
