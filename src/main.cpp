@@ -4,7 +4,7 @@
 #include <thread>   
 #include <algorithm>
 #include <cstring>  
-#include <iomanip>  // Para std::fixed, std::setprecision
+#include <iomanip> 
 #include "Chip8.h"    
 #include "components/Display.h"
 
@@ -26,22 +26,25 @@ uint32_t parse_args(int argc, char* argv[], const char** rom_path, uint32_t defa
     for (int i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "--clock") == 0 && i + 1 < argc) {
             try {
+                // Tenta converter o argumento seguinte (i+1) para um inteiro sem sinal
                 clock_hz = std::stoul(argv[++i]);
                 std::cout << "DEBUG: Clock configurado para " << clock_hz << " Hz." << std::endl;
-            } catch (...) {
-                std::cerr << "AVISO: Valor de --clock invalido. Usando padrao: " << default_clock << " Hz." << std::endl;
+            } catch (const std::exception& e) {
+                // Critério de Aceitação: Tratamento de erro para argumento mal-formatado
+                std::cerr << "ERRO de argumento: --clock invalido ('" << argv[i] << "'). Usando padrao: " << default_clock << " Hz." << std::endl;
             }
         } 
-        else if (strcmp(argv[i], "--scale") == 0 && i + 1 < argc) { 
+        else if (strcmp(argv[i], "--scale") == 0 && i + 1 < argc) {
             try {
                 scale_factor = std::stoul(argv[++i]);
-                std::cout << "DEBUG: Fator de escala configurado para " << scale_factor << "x. (Resolucao: " 
-                          << CHIP8_WIDTH * scale_factor << "x" << CHIP8_HEIGHT * scale_factor << ")" << std::endl;
-            } catch (...) {
-                std::cerr << "AVISO: Valor de --scale invalido. Usando padrao: " << DEFAULT_SCALE << "x." << std::endl;
+                std::cout << "DEBUG: Fator de escala configurado para " << scale_factor << "x." << std::endl;
+            } catch (const std::exception& e) {
+                // Critério de Aceitação: Tratamento de erro para argumento mal-formatado
+                std::cerr << "ERRO de argumento: --scale invalido ('" << argv[i] << "'). Usando padrao: " << DEFAULT_SCALE << "x." << std::endl;
             }
         }
         else if (argv[i][0] != '-' || (argv[i][0] == '-' && argv[i][1] != '-')) {
+            // Assume que o argumento é o caminho da ROM
             *rom_path = argv[i];
         }
     }
