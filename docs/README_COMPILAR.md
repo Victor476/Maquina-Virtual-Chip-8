@@ -6,7 +6,7 @@ Este documento detalha o processo de compilação do interpretador Chip-8 utiliz
 
 Para compilar o projeto em qualquer plataforma, você deve ter instalados:
 
-**Compilador C++:** GCC/g++ (versão 9+) ou Clang/clang++ (O projeto usa o padrão C++17 [cite: 145]).
+**Compilador C++:** GCC/g++ (versão 9+) ou Clang/clang++ (O projeto usa o padrão C++17).
 * **Sistema de Build:** CMake (versão 3.10 ou superior).
 * **Biblioteca Gráfica/I/O:** **SDL3** (Simple DirectMedia Layer) - A versão de código-fonte está incluída no diretório `vendor/`.
 
@@ -20,7 +20,7 @@ Siga estes passos no terminal (Linux/WSL) para configurar o projeto e gerar o ex
 
 ### Passo A: Navegar e Limpar (Estado de Fábrica)
 
-Navegue para o diretório raiz do projeto (`Maquina-Virtual-Chip-8/`). [cite_start]É recomendável usar o target `rebuild` se ele foi adicionado ao seu `CMakeLists.txt`[cite: 161]:
+Navegue para o diretório raiz do projeto (`Maquina-Virtual-Chip-8/`). É recomendável usar o target `rebuild` se ele foi adicionado ao seu `CMakeLists.txt`:
 
 ```bash
 
